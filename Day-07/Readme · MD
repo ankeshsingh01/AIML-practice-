@@ -1,0 +1,51 @@
+# Day 7 - Time Series Forecasting (Airline Passengers)
+
+First time series project. This is a genuinely different kind of problem from everything before it - in every past project, each row of data was independent (one house's price has nothing to do with another house's price). Here, **order matters**. This month's passenger count is directly related to last month's, and there's a repeating yearly pattern on top of that.
+
+## The dataset
+
+Used the classic **Airline Passengers dataset** - real monthly totals of international airline passengers from January 1949 to December 1960 (144 real months of data). This is one of the most famous datasets in time series analysis, originally from a 1976 textbook by Box & Jenkins, and it comes bundled with the seaborn library.
+
+Source: https://github.com/mwaskom/seaborn-data (flights.csv)
+
+## Two patterns in the data (visible just by plotting it)
+
+- **Trend** - a clear long-term upward climb in passengers over the 12 years (air travel was growing)
+- **Seasonality** - a repeating yearly pattern (more travel in summer months, consistently, every single year)
+
+Both are visible immediately in `images/raw_data.png` - the line generally climbs, but with a repeating wave pattern on top of the climb.
+
+## Splitting the data - the part that's different from every other project
+
+Every previous project used a random train/test split. That's not allowed here - if I randomly picked test months, some of them would be BEFORE some of the training months, which means the model could accidentally "peek into the future" during training. That's cheating and gives a fake sense of accuracy.
+
+Instead, split strictly by time: trained on the **first 132 months**, tested on the **last 12 months** (the most recent full year). The model only ever sees the past when making its forecast - exactly how it would work in a real use case.
+
+## Baseline first
+
+Before trying anything fancy, set up a dumb baseline: just repeat the last known value for every future month ("naive forecast"). This matters because if a complicated model can't beat something this simple, the complexity isn't earning its keep. Naive baseline MAE: **76.0 passengers** off, on average.
+
+## The actual model: Holt-Winters Exponential Smoothing
+
+Used Holt-Winters, which explicitly models both trend AND seasonality (as opposed to a plain moving average, which handles neither well). Told it `seasonal_periods=12` since the seasonal cycle here is exactly one year.
+
+Result: **13.4 passengers MAE** on the test set - beating the naive baseline by **82.4%**. RMSE was 17.0. `images/forecast_vs_actual.png` shows the forecast line tracking the actual test data closely, including catching the seasonal summer peak.
+
+## Forecasting into the actual future
+
+Refit the model on ALL 144 months (not just the training portion) and forecast 12 months beyond the dataset itself - so this is a genuine prediction for Jan-Dec 1961, months that don't exist in the data at all. The forecast correctly shows the seasonal summer peak (July 1961 predicted highest, around 648) continuing the established yearly pattern.
+
+## Stack
+Python, Pandas, Statsmodels (Holt-Winters Exponential Smoothing), Seaborn, Matplotlib, Scikit-learn (for MAE/RMSE)
+
+## Running it
+```bash
+pip install -r requirements.txt
+python passenger_forecast.py
+```
+Plots save into the `images/` folder.
+
+## What I'd try next
+- Try ARIMA/SARIMA and compare against Holt-Winters
+- Try Facebook's Prophet library, which is built specifically for business-style forecasting and handles holidays/irregular events
+- Test on a noisier real dataset (like daily stock prices) where the trend/seasonality isn't as clean as this textbook example
