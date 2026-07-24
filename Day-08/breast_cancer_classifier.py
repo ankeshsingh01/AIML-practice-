@@ -96,15 +96,22 @@ print(f"\nFalse negatives (missed cancer cases): {false_negatives}")
 
 # ---------------------------
 # 7. Which features mattered most?
+# Sort by MAGNITUDE (absolute value) so all bars point the same direction -
+# color tells us the direction of impact instead (green = pushes toward
+# benign, red = pushes toward malignant), which is much easier to read
+# than mixing bar direction AND magnitude together.
 # ---------------------------
 coefficients = model.coef_[0]
 top_features_idx = np.argsort(np.abs(coefficients))[-10:]
+top_coefs = coefficients[top_features_idx]
+top_names = [feature_names[i] for i in top_features_idx]
+bar_colors = ["#e74c3c" if c < 0 else "#2ecc71" for c in top_coefs]
 
 plt.figure(figsize=(8, 6))
-plt.barh(range(10), coefficients[top_features_idx])
-plt.yticks(range(10), [feature_names[i] for i in top_features_idx])
-plt.xlabel("Coefficient (impact on prediction)")
-plt.title("Top 10 Most Important Features")
+plt.barh(range(10), np.abs(top_coefs), color=bar_colors)
+plt.yticks(range(10), top_names)
+plt.xlabel("Impact on prediction (magnitude)")
+plt.title("Top 10 Most Important Features\n(green = pushes toward benign, red = pushes toward malignant)")
 plt.tight_layout()
 plt.savefig("images/feature_importance.png")
 print("Saved images/feature_importance.png")
